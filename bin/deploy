@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -eux
+
+BUCKET_NAME="${1:-jpedro-sam}"
+STACK_NAME="${2:-jpedro-sam}"
+
+sam build --region eu-west-1
+sam package --template-file template.yml --s3-bucket $BUCKET_NAME --output-template-file packaged.yaml
+sam deploy --region eu-west-1 --template-file packaged.yaml --stack-name $STACK_NAME --capabilities CAPABILITY_IAM
+# aws cloudformation describe-stacks --stack-name $STACK_NAME --region eu-west-1 --query 'Stacks[].Outputs'

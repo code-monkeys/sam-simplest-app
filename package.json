@@ -1,8 +1,17 @@
 {
-  "name": "sam-simplest-app",
+  "name": "sam-app",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "./hello",
+  "config": {
+    "stackName": "nordcloud-sam-simple",
+    "bucketName": "jpedro-sam"
+  },
+  "scripts": {
+    "_deploy": "sam build --region eu-west-1 && sam package --template-file template.yml --s3-bucket $npm_package_config_bucketName --output-template-file packaged.yaml && sam deploy --region eu-west --template-file packaged.yaml --stack-name $npm_package_config_stackName --capabilities CAPABILITY_IAM && aws cloudformation describe-stacks --stack-name $npm_package_config_stackName --region eu-west-1 --query 'Stacks[].Outputs'",
+    "deploy": "./bin/deploy $npm_package_config_bucketName $npm_package_config_stackName",
+    "describe": "aws cloudformation describe-stacks --region eu-west-1 --stack-name $npm_package_config_stackName --query 'Stacks[].Outputs'"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC"
