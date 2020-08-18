@@ -1,15 +1,19 @@
 exports.authorize = function (event, context, callback) {
     console.log(event);
     console.log(context);
-    console.log(callback);
-    const token = event.headers.Authorization || false;
+    const token = event.headers["X-Auth"] || false;
     const methodArn = event.methodArn;
+    console.log("==> TOKEN", token);
 
     switch (token.toLowerCase()) {
         case 'allow':
             event.headers["X-OK"] = "ok";
+            console.log("==> ALLOWED");
+            console.log(event.headers);
             return generateAuthResponse('user', 'Allow', methodArn);
         default:
+            console.log("==> DENIED");
+            console.log(event.headers);
             return generateAuthResponse('user', 'Deny', methodArn);
     }
 }

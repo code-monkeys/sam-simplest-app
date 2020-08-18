@@ -2,10 +2,14 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: 'AWS::Serverless-2016-10-31'
 
 Resources:
-  MyApi:
+  Api:
     Type: AWS::Serverless::Api
     Properties:
       StageName: dev
+      Cors:
+        AllowMethods: "'*'"
+        AllowHeaders: "'*'"
+        AllowOrigin:  "'*'"
       Auth:
         DefaultAuthorizer: AuthToken
         Authorizers:
@@ -17,8 +21,10 @@ Resources:
             Identity:
               Headers:
               - Authorization
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt CognitoUserPool.Arn
 
-  HelloFunction:
+  Echo:
     Type: AWS::Serverless::Function
     Properties:
       Runtime: nodejs10.x
@@ -28,7 +34,7 @@ Resources:
         HelloAPI:
           Type: Api
           Properties:
-            RestApiId: !Ref MyApi
+            RestApiId: !Ref Api
             Path: /hello
             Method: GET
 
@@ -46,12 +52,62 @@ Resources:
       CodeUri: ./request
       Handler: handler.authorize
 
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: UserPool1
+      LambdaConfig:
+        PreSignUp: !GetAtt PreSignup.Arn
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+      UsernameAttributes:
+      - email
+      Schema:
+      - AttributeDataType: String
+        Name: email
+        Required: false
+
+  CognitoClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: CognitoClient
+      UserPoolId: !Ref CognitoUserPool
+
+  PreSignup:
+    Type: AWS::Serverless::Function
+    Properties:
+      InlineCode: |
+        exports.handler = async (event, context, callback) => {
+          event.response = { autoConfirmUser: true }
+          return event
+        }
+      Handler: index.handler
+      MemorySize: 128
+      Runtime: nodejs10.x
+      Timeout: 3
+
+  PreSignupPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt PreSignup.Arn
+      Principal: cognito-idp.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPool}'
+
+
 Outputs:
   Region:
     Value: !Ref AWS::Region
 
   ApiId:
-    Value: !Ref MyApi
+    Value: !Ref Api
 
   ApiUrl:
-    Value: !Sub 'https://${MyApi}.execute-api.${AWS::Region}.amazonaws.com/dev/'
+    Value: !Sub 'https://${Api}.execute-api.${AWS::Region}.amazonaws.com/dev/'
+
+  CognitoUserPoolId:
+    Value: !Ref CognitoUserPool
+
+  CognitoClientId:
+    Value: !Ref CognitoClient
